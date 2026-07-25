@@ -1,0 +1,47 @@
+name: cloud-lord-demo-fe deploy (OIDC)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+#OIDC: exchange the GitHub Actions token for short-lived AWS creds — no long-lived access keys.
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build Vite SPA and deploy to S3 + CloudFront
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.9.0
+
+      #Write the build-time API base URL BEFORE building so Vite inlines it into the bundle.
+      #This name, the secret, and import.meta.env.VITE_API_BASE_URL in the app must be identical.
+      - name: Write build-time .env
+        run: echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > .env
+
+      - name: Install and build
+        run: |
+          npm install
+          npm run build
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Sync build to S3
+        run: aws s3 sync dist/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
+
+      - name: Invalidate CloudFront cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
