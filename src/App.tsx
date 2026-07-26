@@ -15,8 +15,7 @@ export default function App() {
     setSubmitting(true)
     try {
       const res = await login({ username, password })
-      //JWT path: keep any returned token so later calls can send Authorization:
-      //Bearer <token>. Cookie path: nothing to store, credentials:'include' does it.
+      //Keep any returned token so later calls can send Authorization: Bearer <token>.
       if (res.token) setToken(res.token)
       setLoggedInUser(res.user ?? username)
     } catch (err) {
