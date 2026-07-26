@@ -20,7 +20,7 @@ export default function App() {
       setLoggedInUser(res.user ?? username)
     } catch (err) {
       const apiErr = err as { message?: string }
-      setError(apiErr.message ?? 'Login failed')
+      setError(apiErr.message || 'Login failed')
     } finally {
       setSubmitting(false)
     }

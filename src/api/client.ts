@@ -31,7 +31,9 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw { message: body.message ?? res.statusText, status: res.status } as ApiError
+    //Prefer the backend's `error` key; || (not ??) for the final fallback so "" never survives.
+    const message = body.error ?? body.message ?? res.statusText ?? ''
+    throw { message: message || `Request failed (${res.status})`, status: res.status } as ApiError
   }
   return res.json() as Promise<T>
 }
